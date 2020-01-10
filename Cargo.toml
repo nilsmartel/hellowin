@@ -10,3 +10,4 @@ edition = "2018"
 gotham = "0.4.0"                           # A flexible web framework that promotes stability, safety, security and speed.
 druid = "0.4.0"              # Data-oriented Rust UI design toolkit.
 structopt = "0.3.7"                # Parse command line argument by defining a struct.
+lazy_static = "1.4.0"            # A macro for declaring lazily evaluated statics in Rust.
