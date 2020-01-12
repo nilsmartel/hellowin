@@ -1,3 +1,7 @@
+mod cli;
+mod event;
+mod ui;
+
 #[macro_use]
 extern crate lazy_static;
 use gotham::state::State;
@@ -5,24 +9,28 @@ use std::sync::Arc;
 use std::sync::Mutex;
 use structopt::StructOpt;
 
-#[derive(Debug, StructOpt)]
-#[structopt(name = "hellowin", about = "Create a controllable Window")]
-struct Config {
-    #[structopt(short = "p", long = "port", help = "Port to receive directions from")]
-    port: String,
-}
-
 lazy_static! {
-    static ref event_cue: Arc<Mutex<Vec<Event>>> = Arc::new(Mutex::new(Vec::new()));
+    static ref event_cue: Arc<Mutex<Vec<event::Event>>> = Arc::new(Mutex::new(Vec::new()));
 }
 
+use druid::{AppLauncher, WindowDesc};
 fn main() {
-    let args = Config::from_args();
+    let args = cli::Config::from_args();
     let addr = format!("127.0.0.1:{}", args.port);
+    let main_window = WindowDesc::new(ui::imageview);
 
     println!("Listening on port {}", &addr);
 
-    start_server(addr);
+    let data = ui::Image {
+        width: 0,
+        height: 0,
+        data: vec![],
+    };
+
+    std::thread::spawn(|| start_server(addr));
+    AppLauncher::with_window(main_window)
+        .launch(data)
+        .expect("launch failed");
 }
 
 fn start_server(port: String) {
@@ -30,31 +38,17 @@ fn start_server(port: String) {
     gotham::start(port, move || {
         let clone = c.clone();
         Ok(move |state: State| {
-            let events = vec![Event {
+            let events = vec![event::Event {
                 window: "Sample".into(),
-                action: Action::Move { x: 300., y: 300. },
+                action: event::Action::Move { x: 300., y: 300. },
             }];
+            let mut cue = clone.lock().unwrap();
 
-            {
-                let mut cue = clone.lock().unwrap();
-
-                for event in events {
-                    cue.push(event);
-                }
+            for event in events {
+                cue.push(event);
             }
 
             (state, "Hello")
         })
     })
-}
-
-struct Event {
-    window: String,
-    action: Action,
-}
-
-enum Action {
-    Resize { width: f64, height: f64 },
-    Move { x: f64, y: f64 },
-    Close,
 }
